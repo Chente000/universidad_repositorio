@@ -1,0 +1,21 @@
+# Node (Frontend)
+node_modules/
+npm-debug.log
+build/
+.env
+
+# Python (Backend)
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Docker & DB
+.db_data/
+postgres_data/
+
+# Sistema
+.DS_Store
+Thumbs.db
