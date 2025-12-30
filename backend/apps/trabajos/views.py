@@ -14,6 +14,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, permissions
+import os
+from django.http import FileResponse
 
 from .models import TrabajoInvestigacion, ConfiguracionCarrera, LogActividades
 from .serializers import (
@@ -167,9 +169,16 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
         
         return super().retrieve(request, *args, **kwargs)
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['get', 'post'])
     def descargar(self, request, pk=None):
         trabajo = self.get_object()
+        
+        # 1. Validaciones de seguridad
+        if not trabajo.archivo_pdf:
+            return Response(
+                {"error": "El archivo no existe en el servidor."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
         
         # Verificar que el trabajo puede ser descargado
         if not getattr(trabajo, 'puede_ser_descargado', False):
@@ -181,13 +190,13 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
         from apps.comentarios.models import ReporteDescarga
         ReporteDescarga.objects.create(
             trabajo=trabajo,
-            usuario=request.user,
+            usuario=request.user if request.user.is_authenticated else None,
             ip_address=self._get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')
         )
         
         LogActividades.objects.create(
-            usuario=request.user,
+            usuario=request.user if request.user.is_authenticated else None,
             accion='download',
             trabajo=trabajo,
             descripcion=f"Descargó el trabajo: {trabajo.titulo}",
@@ -195,17 +204,30 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
             user_agent=request.META.get('HTTP_USER_AGENT', '')
         )
         
-        # Manejo seguro si no hay archivo (aunque debería haber)
-        download_url = trabajo.archivo_pdf.url if trabajo.archivo_pdf else ''
+        # 3. Incrementar contador (Opcional, según el código que te pasaron)
+        if hasattr(trabajo, 'descargas_count'):
+            trabajo.descargas_count += 1
+            trabajo.save()
+            
+        # 4. Retornar el archivo físico (Nueva lógica)
+        response = FileResponse(trabajo.archivo_pdf.open('rb'), content_type='application/pdf')
+        nombre_archivo = os.path.basename(trabajo.archivo_pdf.name)
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         
-        return Response({
-            'download_url': download_url,
-            'trabajo': {
-                'titulo': trabajo.titulo,
-                'autores': trabajo.autores,
-                'año': trabajo.año
-            }
-        })
+        return response # <-- Asegúrate de que no haya nada después de este return
+                
+        # Manejo seguro si no hay archivo (aunque debería haber)
+        # download_url = trabajo.archivo_pdf.url if trabajo.archivo_pdf else ''
+        
+        #return Response({
+        #    'download_url': download_url,
+        #    'trabajo': {
+        #        'titulo': trabajo.titulo,
+        #        'autores': trabajo.autores,
+        #        'año': trabajo.año
+        #    }
+        #}
+        #)
     
     @action(detail=True, methods=['post'])
     def aprobar(self, request, pk=None):

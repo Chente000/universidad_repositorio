@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import DetalleTrabajo from './pages/DetalleTrabajo';
 
 // Componentes
 import Header from './components/layout/Header';
@@ -31,6 +32,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<ListaTrabajos />} />
                 <Route path="/trabajos" element={<ListaTrabajos />} />
+                <Route path="/trabajos/:id" element={<DetalleTrabajo />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/dashboard/subir" element={<SubirTrabajo />} />
                 {/* Aquí puedes ir agregando más rutas en el futuro */}

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// frontend/src/pages/dashboard/SubirTrabajo.js
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,14 +10,38 @@ export default function SubirTrabajo() {
     tutores: '',
     // IMPORTANTE: Ponemos un ID de carrera que exista en tu BD (ej: 1)
     // Más abajo añadiremos un <select> para que esto sea dinámico
-    carrera: '1', 
+    carrera: '', 
     tipo_trabajo: 'especial_grado',
     año: new Date().getFullYear(),
   });
   
+  const [carreras, setCarreras] = useState([]);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Cargar carreras desde el backend al montar el componente
+  useEffect(() => {
+  const fetchCarreras = async () => {
+    try {
+      // Intenta con la ruta completa si axios no tiene baseURL configurada
+      const response = await axios.get('/carreras/');
+      
+      // IMPORTANTE: DRF a veces devuelve la lista dentro de response.data.results 
+      // si tienes paginación activada. Verifica esto:
+      const data = Array.isArray(response.data) ? response.data : response.data.results;
+      setCarreras(data || []);
+
+    console.log("Carreras cargadas:", data); // Para que verifiques en consola
+      setCarreras(data || []);
+    } catch (err) {
+      console.error("Error al cargar carreras:", err);
+      setCarreras([]); // Si falla, mantenemos el array vacío para que no rompa el .map
+    }
+  };
+  fetchCarreras();
+}, []);
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,61 +50,39 @@ export default function SubirTrabajo() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validar que el archivo exista
     if (!file) {
         alert("Por favor selecciona un archivo PDF");
         return;
     }
 
     const data = new FormData();
-    
-    // Agregamos los campos de texto
-    data.append('titulo', formData.titulo);
-    data.append('autores', formData.autores);
-    data.append('tutores', formData.tutores);
-    data.append('carrera', formData.carrera); // Enviamos el ID de la carrera
-    data.append('tipo_trabajo', formData.tipo_trabajo);
-    data.append('año', formData.año);
-    
-    // IMPORTANTE: El nombre del campo debe coincidir con Django (archivo_pdf)
+    // Agregamos todos los campos del formData de una vez
+    Object.keys(formData).forEach(key => data.append(key, formData[key]));
+    // Agregamos el archivo con el nombre exacto que espera Django
     data.append('archivo_pdf', file);
 
     try {
       setLoading(true);
       
-      // Enviamos la petición
-      // Si configuraste la BaseURL con /api/v1/ en otro lado, usa solo '/trabajos/'
-      // Si no, usa la ruta completa como aparece abajo:
       await axios.post('/trabajos/', data, {
         headers: { 
             'Content-Type': 'multipart/form-data',
-            // Si el usuario debe estar logueado, axios suele enviar el token 
-            // automáticamente si lo configuraste en el AuthContext.
+            // El token se suele manejar en interceptores, pero si no, agrégalo aquí:
+            // 'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
       });
 
       alert("¡Trabajo subido con éxito!");
       navigate('/trabajos');
     } catch (err) {
-      console.error("Error completo:", err.response?.data);
+      console.error("Error al subir:", err.response?.data);
       
       let mensajeError = "Error de conexión con el servidor";
-
       if (err.response?.data) {
-        // Si el error es un objeto (JSON), lo convertimos a texto
-        if (typeof err.response.data === 'object') {
-          mensajeError = JSON.stringify(err.response.data);
-        } 
-        // Si el error empieza con <!DOCTYPE, es un error 500 de Django (HTML)
-        else if (typeof err.response.data === 'string' && err.response.data.includes('<!DOCTYPE')) {
-          mensajeError = "Error interno del servidor (500). Verifica los logs de Django.";
-        }
-        // Cualquier otro caso de texto
-        else {
-          mensajeError = err.response.data;
-        }
+        mensajeError = typeof err.response.data === 'object' 
+          ? JSON.stringify(err.response.data) 
+          : err.response.data;
       }
-
       alert("Error al subir: " + mensajeError);
     } finally {
       setLoading(false);
@@ -124,7 +127,7 @@ export default function SubirTrabajo() {
           </div>
         </div>
 
-        {/* Carrera - CAMPO NUEVO PARA EVITAR EL ERROR 400 */}
+        {/* Carrera - AHORA DINÁMICO */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Carrera</label>
           <select 
@@ -134,10 +137,12 @@ export default function SubirTrabajo() {
             required
             className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary-500 outline-none bg-white"
           >
-            <option value="1">Ingeniería de Sistemas</option>
-            <option value="2">Ingeniería Civil</option>
-            <option value="3">Economía Social</option>
-            {/* Asegúrate de que los valores 1, 2, 3 correspondan a los IDs en tu base de datos */}
+            <option value="" disabled hidden>Seleccione una carrera</option>
+            {Array.isArray(carreras) && carreras.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
           </select>
         </div>
 

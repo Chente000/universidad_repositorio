@@ -202,7 +202,7 @@ class TrabajoInvestigacionAprobacionSerializer(serializers.Serializer):
         with transaction.atomic():
             if estado == 'aprobado':
                 trabajo.marcar_como_aprobado(usuario)
-            elif estado == 'rechazo':
+            elif estado == 'rechazodo':
                 trabajo.marcar_como_rechazado(motivo)
             elif estado == 'requiere_correcciones':
                 trabajo.estado = 'requiere_correcciones'
