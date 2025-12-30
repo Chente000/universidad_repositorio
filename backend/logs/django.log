@@ -5158,3 +5158,60 @@ Not Found: /api/v1/configuracion-carreras/
 Not Found: /api/v1/configuracion-carreras/
 Not Found: /api/v1/configuracion-carreras/
 Watching for file changes with StatReloader
+Not Found: /api/v1/api/v1/carreras/
+Watching for file changes with StatReloader
+Unauthorized: /api/v1/usuarios/perfil/
+Unauthorized: /api/v1/trabajos/
+Unauthorized: /api/v1/usuarios/perfil/
+Not Found: /favicon.ico
+Unauthorized: /api/v1/trabajos/
+Unauthorized: /api/v1/trabajos/
+Not Found: /api/v1/api/v1/carreras/
+Not Found: /api/v1/api/v1/auth/register/
+Not Found: /api/v1/api/v1/carreras/
+Not Found: /api/v1/api/v1/carreras/
+Not Found: /api/v1/api/v1/carreras/
+Not Found: /api/v1/api/v1/auth/register/
+Forbidden: /api/v1/auth/register/
+Forbidden: /api/v1/auth/register/
+Forbidden: /api/v1/auth/register/
+Watching for file changes with StatReloader
+Forbidden: /api/v1/auth/register/
+/app/universidad_repositorio/settings.py changed, reloading.
+Watching for file changes with StatReloader
+/app/universidad_repositorio/settings.py changed, reloading.
+Watching for file changes with StatReloader
+/app/universidad_repositorio/settings.py changed, reloading.
+Watching for file changes with StatReloader
+Forbidden: /api/v1/auth/register/
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+/app/universidad_repositorio/settings.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+/app/universidad_repositorio/settings.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Forbidden: /api/v1/auth/register/
+/app/universidad_repositorio/settings.py changed, reloading.
+Watching for file changes with StatReloader
+/app/universidad_repositorio/settings.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Forbidden: /api/v1/auth/register/
+Unauthorized: /api/v1/carreras/
+Unauthorized: /api/v1/carreras/
+Unauthorized: /api/v1/carreras/
+Unauthorized: /api/v1/carreras/
+Unauthorized: /api/v1/carreras/
+Unauthorized: /api/v1/carreras/
+Unauthorized: /api/v1/carreras/
+Unauthorized: /api/v1/carreras/
+Unauthorized: /api/v1/carreras/
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader

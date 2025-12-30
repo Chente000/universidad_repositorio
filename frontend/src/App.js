@@ -14,6 +14,8 @@ import { AuthProvider } from './context/AuthContext';
 import ListaTrabajos from './pages/ListaTrabajos';
 import SubirTrabajo from './pages/dashboard/SubirTrabajo';
 import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import { ProtectedRoute } from './pages/auth/ProtectedRoute';
 
 // Configuración de React Query
 const queryClient = new QueryClient();
@@ -34,11 +36,25 @@ function App() {
                 <Route path="/trabajos" element={<ListaTrabajos />} />
                 <Route path="/trabajos/:id" element={<DetalleTrabajo />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
                 <Route path="/dashboard/subir" element={<SubirTrabajo />} />
-                {/* Aquí puedes ir agregando más rutas en el futuro */}
+                {/* RUTA PROTEGIDA: Solo encargados y admins pueden subir */}
+                <Route 
+                  path="/dashboard/subir" 
+                  element={
+                    <ProtectedRoute allowedRoles={[
+                      'encargado_especial_grado', 
+                      'encargado_pasantias', 
+                      'administrador',
+                      'superuser_especial_grado',
+                      'superuser_pasantias'
+                    ]}>
+                      <SubirTrabajo />
+                    </ProtectedRoute>
+                  } 
+                />
               </Routes>
             </main>
-            
             {/* Contenedor para las notificaciones flotantes */}
             <ToastContainer position="top-right" autoClose={3000} />
           </div>

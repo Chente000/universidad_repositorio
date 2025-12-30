@@ -421,12 +421,16 @@ class ConfiguracionCarreraViewSet(viewsets.ModelViewSet):
     """
     queryset = ConfiguracionCarrera.objects.all()
     serializer_class = ConfiguracionCarreraSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     
     def get_queryset(self):
         user = self.request.user
+        if not user or user.is_anonymous:
+            return ConfiguracionCarrera.objects.filter(activa=True)
+        
         if user.is_staff or user.is_superuser:
             return ConfiguracionCarrera.objects.all()
+            
         return ConfiguracionCarrera.objects.filter(activa=True)
     
     def create(self, request, *args, **kwargs):

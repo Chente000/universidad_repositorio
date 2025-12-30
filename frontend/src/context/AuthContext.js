@@ -92,7 +92,7 @@ export function AuthProvider({ children }) {
   // Configure axios defaults
   useEffect(() => {
     // base API URL for development - prefer relative paths so CRA `proxy` can avoid CORS
-    axios.defaults.baseURL = 'http://localhost:8080/api/v1';
+    axios.defaults.baseURL = 'http://localhost:8001/api/v1';
     const token = localStorage.getItem('token');
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;

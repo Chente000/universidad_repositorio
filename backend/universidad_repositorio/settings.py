@@ -199,8 +199,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3001",
-    "http://127.0.0.1:3001",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
 ]
 CORS_ALLOW_ALL_ORIGINS = False # <-- CAMBIO CLAVE
 CORS_ALLOW_CREDENTIALS = True
@@ -218,10 +218,8 @@ CORS_ALLOW_HEADERS = [
 # NUEVA CONFIGURACIÓN: CSRF Trusted Origins
 # Esto es crucial para solucionar el error 403 (Forbidden) en las peticiones POST.
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3001",
-    "http://127.0.0.1:3001",
-    "http://localhost:443",  # Se añade por si Django necesita confiar en sí mismo
-    "http://127.0.0.1:443",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
 ]
 CSRF_COOKIE_DOMAIN = None # Esto le permite usar el dominio del host de la petición
 
