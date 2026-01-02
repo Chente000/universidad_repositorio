@@ -232,32 +232,76 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def aprobar(self, request, pk=None):
         trabajo = self.get_object()
+        user = request.user
         
-        if not getattr(request.user, 'es_superuser_trabajo', False):
+        # Verificación de permisos
+        es_autorizado = (
+            user.is_superuser or 
+            getattr(user, 'rol', '') in ['superuser_especial_grado', 'superuser_pasantias', 'administrador']
+        )
+
+        if not es_autorizado:
             raise PermissionDenied("No tienes permisos para aprobar trabajos.")
         
-        serializer = TrabajoInvestigacionAprobacionSerializer(
-            trabajo,
-            data=request.data,
-            context={'request': request}
-        )
+        # --- CORRECCIÓN AQUÍ ---
+        # Usamos 'data' (la copia modificada) en lugar de 'request.data'
+        data = {'estado': 'aprobado'} 
+        serializer = self.get_serializer(trabajo, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
-        
         trabajo_aprobado = serializer.save()
         
+        # --- CORRECCIÓN IP ---
+        # Si no tienes la función _get_client_ip, usa esto directamente:
+        ip_addr = request.META.get('REMOTE_ADDR')
+
         LogActividades.objects.create(
             usuario=request.user,
-            accion='approve' if trabajo_aprobado.estado == 'aprobado' else 'reject',
+            accion='approve',
             trabajo=trabajo_aprobado,
-            descripcion=f"{'Aprobó' if trabajo_aprobado.estado == 'aprobado' else 'Rechazó'} el trabajo: {trabajo_aprobado.titulo}",
-            ip_address=self._get_client_ip(request),
+            descripcion=f"Aprobó el trabajo: {trabajo_aprobado.titulo}",
+            ip_address=ip_addr,
             user_agent=request.META.get('HTTP_USER_AGENT', '')
         )
         
         return Response({
-            'message': f'Trabajo {trabajo_aprobado.estado} exitosamente.',
+            'message': 'Trabajo aprobado exitosamente.',
             'trabajo': TrabajoInvestigacionListSerializer(trabajo_aprobado, context={'request': request}).data
         })
+
+
+    @action(detail=True, methods=['post'])
+    def rechazar(self, request, pk=None):
+        trabajo = self.get_object()
+        
+        # Cambiamos el estado directamente o mediante un serializer
+        trabajo.estado = 'rechazado'
+        trabajo.save()
+
+        LogActividades.objects.create(
+            usuario=request.user,
+            accion='reject',
+            trabajo=trabajo,
+            descripcion=f"Rechazó el trabajo: {trabajo.titulo}",
+            ip_address=self._get_client_ip(request)
+        )
+
+        return Response({'message': 'Trabajo rechazado exitosamente.'})
+
+    @action(detail=False, methods=['get'])
+    def pendientes(self, request):
+        """
+        Retorna solo los trabajos que están en estado pendiente
+        """
+        # Filtramos del queryset base solo los pendientes
+        pendientes = self.get_queryset().filter(estado='pendiente')
+        
+        # Usamos el serializer de listado
+        serializer = TrabajoInvestigacionListSerializer(
+            pendientes, 
+            many=True, 
+            context={'request': request}
+        )
+        return Response(serializer.data)
 
     # ... (El resto de tus métodos 'buscar_inteligente', 'recomendados', 'estadisticas' quedan igual)
     # He resumido aquí para enfocar en la solución, pero mantén tus otros métodos abajo.

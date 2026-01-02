@@ -71,7 +71,7 @@ return (
         <input type="password" placeholder="Contraseña" required className="w-full border p-2" 
         onChange={e => setFormData({...formData, password: e.target.value})} />
 
-        <input type="password" placeholder="Confirmar Contraseña" required className="w-full border p-2" 
+        <input name="password confirm" type="password" placeholder="Confirmar Contraseña" required className="w-full border p-2" 
         onChange={e => setFormData({...formData, password_confirm: e.target.value})}
 />
 

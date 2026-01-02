@@ -146,6 +146,21 @@ export default function SubirTrabajo() {
           </select>
         </div>
 
+        {/* Tipo de Trabajo y Año */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700">Tipo de Trabajo</label>
+            <select 
+              name="tipo_trabajo" 
+              className="mt-1 block w-full border rounded-md p-2"
+              onChange={handleChange} // Asegúrate de tener esta función manejando el estado
+              required
+            >
+              <option value="">Seleccione un tipo</option>
+              <option value="grado">Trabajo Especial de Grado</option>
+              <option value="pasantia">Prácticas Profesionales (Pasantías)</option>
+            </select>
+        </div>
+
         {/* Archivo */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Archivo PDF</label>

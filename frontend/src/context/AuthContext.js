@@ -1,14 +1,14 @@
 // frontend/src/context/AuthContext.js
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // Initial state
 const initialState = {
-  user: null,
+  user: JSON.parse(localStorage.getItem('user')) || null, // <--- Leer usuario guardado
   token: localStorage.getItem('token'),
   isLoading: true,
-  isAuthenticated: false,
+  isAuthenticated: !!localStorage.getItem('token'), // <--- true si hay token
 };
 
 // Action types
@@ -63,6 +63,7 @@ function authReducer(state, action) {
         ...state,
         user: action.payload,
         isAuthenticated: true,
+        isLoading: false, // <--- ¡AÑADE ESTA LÍNEA!
       };
     
     case AUTH_ACTIONS.SET_LOADING:
@@ -166,22 +167,21 @@ export function AuthProvider({ children }) {
 
   // Verify token function
   const verifyToken = async () => {
-    try {
-      dispatch({ type: AUTH_ACTIONS.LOGIN_START });
-      
-      const response = await axios.get('/usuarios/perfil/');
-      dispatch({ 
-        type: AUTH_ACTIONS.SET_USER, 
-        payload: response.data 
-      });
-      
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE });
-    }
-  };
+  try {
+    dispatch({ type: AUTH_ACTIONS.LOGIN_START }); // Pone isLoading en true
+    const response = await axios.get('/usuarios/perfil/');
+    dispatch({ 
+      type: AUTH_ACTIONS.SET_USER, 
+      payload: response.data 
+    });
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE });
+  } finally {
+    // ESTO ES VITAL: Asegura que isLoading pase a false al terminar la petición
+    dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+  }
+};
 
   // Login function
   const login = async (credentials) => {

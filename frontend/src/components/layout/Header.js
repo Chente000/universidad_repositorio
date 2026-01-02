@@ -37,7 +37,7 @@ function Header() {
   const dashboardItems = [
     { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
     { name: 'Subir Trabajo', href: '/dashboard/subir', icon: DocumentTextIcon },
-    { name: 'Gestión', href: '/dashboard/gestion', icon: Cog6ToothIcon },
+    { name: 'Gestión', href: '/dashboard/Gestion', icon: Cog6ToothIcon },
   ];
 
   return (
