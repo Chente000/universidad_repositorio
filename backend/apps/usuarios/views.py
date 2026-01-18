@@ -87,17 +87,26 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         
-        # Los estudiantes solo pueden ver su propio perfil
+        # 1. Si es superusuario o admin, ve absolutamente todo
+        if user.is_superuser or user.is_staff:
+            return Usuario.objects.all()
+        
+        # 2. EXCEPCIÓN PARA SUBIR TRABAJO: 
+        # Si un encargado pide la lista de estudiantes, se los mostramos todos.
+        rol_filtro = self.request.query_params.get('rol')
+        if rol_filtro == 'estudiante' and (user.es_encargado_especial_grado or user.es_encargado_pasantias):
+            return Usuario.objects.filter(rol='estudiante')
+
+        # 3. Los estudiantes solo pueden ver su propio perfil
         if user.rol == 'estudiante':
             return Usuario.objects.filter(id=user.id)
         
-        # Los encargados pueden ver usuarios de su carrera
+        # 4. Filtro por defecto para encargados (ver su carrera)
         if user.es_encargado_especial_grado or user.es_encargado_pasantias:
             return Usuario.objects.filter(
                 Q(carrera=user.carrera) | Q(id=user.id)
             )
         
-        # Los superusuarios y administradores pueden ver todos
         return Usuario.objects.all()
     
     @action(detail=False, methods=['post'])

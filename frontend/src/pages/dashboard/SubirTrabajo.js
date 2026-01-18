@@ -8,6 +8,7 @@ export default function SubirTrabajo() {
     titulo: '',
     autores: '',
     tutores: '',
+    estudiante: '',
     // IMPORTANTE: Ponemos un ID de carrera que exista en tu BD (ej: 1)
     // Más abajo añadiremos un <select> para que esto sea dinámico
     carrera: '', 
@@ -19,6 +20,24 @@ export default function SubirTrabajo() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [estudiantes, setEstudiantes] = useState([]);
+
+  useEffect(() => {
+  const fetchEstudiantes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      // Necesitarás un endpoint en el backend que devuelva solo usuarios con rol 'estudiante'
+      const response = await axios.get('http://localhost:8001/api/v1/usuarios/?rol=estudiante', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const dataLimpia = response.data.results || response.data;
+      setEstudiantes(Array.isArray(dataLimpia) ? dataLimpia : []);
+    } catch (err) {
+      console.error("Error al cargar estudiantes:", err);
+    }
+  };
+  fetchEstudiantes();
+}, []);
 
   // Cargar carreras desde el backend al montar el componente
   useEffect(() => {
@@ -55,10 +74,19 @@ export default function SubirTrabajo() {
         return;
     }
 
+    const token = localStorage.getItem('token');
     const data = new FormData();
     // Agregamos todos los campos del formData de una vez
     Object.keys(formData).forEach(key => data.append(key, formData[key]));
     // Agregamos el archivo con el nombre exacto que espera Django
+    data.append('archivo_pdf', file);
+    data.append('titulo', formData.titulo);
+    data.append('autores', formData.autores);
+    data.append('tutores', formData.tutores);
+    data.append('carrera', formData.carrera);
+    data.append('tipo_trabajo', formData.tipo_trabajo);
+    data.append('año', formData.año);
+    data.append('estudiante', formData.estudiante); // El ID del estudiante seleccionado
     data.append('archivo_pdf', file);
 
     try {
@@ -68,7 +96,7 @@ export default function SubirTrabajo() {
         headers: { 
             'Content-Type': 'multipart/form-data',
             // El token se suele manejar en interceptores, pero si no, agrégalo aquí:
-            // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
         },
       });
 
@@ -156,8 +184,8 @@ export default function SubirTrabajo() {
               required
             >
               <option value="">Seleccione un tipo</option>
-              <option value="grado">Trabajo Especial de Grado</option>
-              <option value="pasantia">Prácticas Profesionales (Pasantías)</option>
+              <option value="especial_grado">Trabajo Especial de Grado</option>
+              <option value="practicas_profesionales">Prácticas Profesionales (Pasantías)</option>
             </select>
         </div>
 
@@ -173,6 +201,26 @@ export default function SubirTrabajo() {
               className="w-full cursor-pointer" 
             />
           </div>
+        </div>
+
+        {/* Estudiante Responsable */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Estudiante Responsable (Dueño del trabajo)</label>
+          <select 
+            name="estudiante" 
+            value={formData.estudiante} 
+            onChange={handleChange}
+            required
+            className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary-500 outline-none bg-white"
+          >
+            <option value="">Seleccione un estudiante</option>
+            {Array.isArray(estudiantes) && estudiantes.map((est) => (
+              <option key={est.id} value={est.id}>
+                {est.first_name} {est.last_name} ({est.username})
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">Este usuario podrá ver el estado de su trabajo en su dashboard.</p>
         </div>
 
         {/* Botón */}

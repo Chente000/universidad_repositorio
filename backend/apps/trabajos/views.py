@@ -234,68 +234,107 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
         trabajo = self.get_object()
         user = request.user
         
-        # Verificación de permisos
+        # 1. Verificación de permisos de seguridad (Guardrail)
         es_autorizado = (
             user.is_superuser or 
             getattr(user, 'rol', '') in ['superuser_especial_grado', 'superuser_pasantias', 'administrador']
         )
 
         if not es_autorizado:
-            raise PermissionDenied("No tienes permisos para aprobar trabajos.")
-        
-        # --- CORRECCIÓN AQUÍ ---
-        # Usamos 'data' (la copia modificada) en lugar de 'request.data'
-        data = {'estado': 'aprobado'} 
-        serializer = self.get_serializer(trabajo, data=data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        trabajo_aprobado = serializer.save()
-        
-        # --- CORRECCIÓN IP ---
-        # Si no tienes la función _get_client_ip, usa esto directamente:
-        ip_addr = request.META.get('REMOTE_ADDR')
+            return Response(
+                {"detail": "No tienes permisos de rango 'Super' para aprobar trabajos."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-        LogActividades.objects.create(
-            usuario=request.user,
-            accion='approve',
-            trabajo=trabajo_aprobado,
-            descripcion=f"Aprobó el trabajo: {trabajo_aprobado.titulo}",
-            ip_address=ip_addr,
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        # 2. Ejecutar la aprobación mediante el Serializer
+        serializer = TrabajoInvestigacionAprobacionSerializer(
+            instance=trabajo, 
+            data={'estado': 'aprobado'}, 
+            context={'request': request}
         )
         
-        return Response({
-            'message': 'Trabajo aprobado exitosamente.',
-            'trabajo': TrabajoInvestigacionListSerializer(trabajo_aprobado, context={'request': request}).data
-        })
+        if serializer.is_valid():
+            trabajo_aprobado = serializer.save()
+            
+            # 3. Registro de Actividad (Log)
+            ip_addr = request.META.get('REMOTE_ADDR')
+            LogActividades.objects.create(
+                usuario=user,
+                accion='approve',
+                trabajo=trabajo_aprobado,
+                descripcion=f"Aprobó el trabajo: {trabajo_aprobado.titulo}",
+                ip_address=ip_addr,
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            return Response({
+                'message': 'Trabajo aprobado exitosamente.',
+                'trabajo': TrabajoInvestigacionListSerializer(trabajo_aprobado, context={'request': request}).data
+            })
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
     @action(detail=True, methods=['post'])
     def rechazar(self, request, pk=None):
         trabajo = self.get_object()
-        
-        # Cambiamos el estado directamente o mediante un serializer
-        trabajo.estado = 'rechazado'
-        trabajo.save()
+        motivo = request.data.get('motivo', '') if request.data else ''
+        motivo = motivo.strip() if isinstance(motivo, str) else ''
+
+        # Usar el método del modelo para aplicar el rechazo y guardar el motivo
+        if motivo:
+            trabajo.marcar_como_rechazado(motivo)
+        else:
+            trabajo.estado = 'rechazado'
+            trabajo.save(update_fields=['estado'])
 
         LogActividades.objects.create(
             usuario=request.user,
             accion='reject',
             trabajo=trabajo,
-            descripcion=f"Rechazó el trabajo: {trabajo.titulo}",
+            descripcion=(f"Rechazó el trabajo: {trabajo.titulo}. Motivo: {motivo}" if motivo else f"Rechazó el trabajo: {trabajo.titulo}"),
             ip_address=self._get_client_ip(request)
         )
 
-        return Response({'message': 'Trabajo rechazado exitosamente.'})
+        return Response({
+            'message': 'Trabajo rechazado exitosamente.',
+            'trabajo': TrabajoInvestigacionListSerializer(trabajo, context={'request': request}).data
+        })
 
     @action(detail=False, methods=['get'])
     def pendientes(self, request):
         """
-        Retorna solo los trabajos que están en estado pendiente
+        Retorna los trabajos pendientes filtrados según el ROL del usuario.
         """
-        # Filtramos del queryset base solo los pendientes
+        user = request.user
+        # 1. Filtro base: solo los que están en estado pendiente
         pendientes = self.get_queryset().filter(estado='pendiente')
+
+        # 2. Lógica de filtrado por rol
+        # Si es superusuario o administrador general, ve TODO.
+        # Si no, filtramos por su especialidad.
+        rol = getattr(user, 'rol', '')
+
+        if user.is_superuser or rol == 'administrador':
+            # No aplicamos filtros extra, ve todo
+            pass
         
-        # Usamos el serializer de listado
+        elif rol in ['encargado_pasantias', 'superuser_pasantias']:
+            # Solo ve prácticas profesionales / pasantías
+            pendientes = pendientes.filter(tipo_trabajo='practicas_profesionales')
+            
+        elif rol in ['encargado_especial_grado', 'superuser_especial_grado']:
+            # Solo ve trabajos especiales de grado
+            pendientes = pendientes.filter(tipo_trabajo='especial_grado')
+        
+        else:
+            # Si un usuario normal intenta entrar aquí, no ve nada
+            return Response(
+                {"detail": "No tienes permisos para ver trabajos pendientes."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 3. Serializar y retornar
         serializer = TrabajoInvestigacionListSerializer(
             pendientes, 
             many=True, 
@@ -367,6 +406,13 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
                 'año': año
             }
         })
+
+    @action(detail=False, methods=['get'])
+    def mis_trabajos(self, request):
+        # Filtra los trabajos donde el campo 'estudiante' sea el usuario que hace la petición
+        trabajos = TrabajoInvestigacion.objects.filter(estudiante=request.user)
+        serializer = self.get_serializer(trabajos, many=True, context={'request': request})
+        return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def recomendados(self, request):

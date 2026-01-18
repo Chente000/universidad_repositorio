@@ -94,6 +94,15 @@ class TrabajoInvestigacion(models.Model):
         verbose_name='Subido por'
     )
     
+    estudiante = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='mis_trabajos',
+        null=True, blank=True, # Permitir nulo por ahora para no romper lo anterior
+        limit_choices_to={'rol': 'estudiante'}, # Solo permite elegir usuarios con rol estudiante
+        verbose_name='Estudiante Propietario'
+    )
+    
     # Usuario que aprobó el trabajo
     aprobado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,

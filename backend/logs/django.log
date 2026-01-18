@@ -5468,3 +5468,87 @@ Watching for file changes with StatReloader
 Watching for file changes with StatReloader
 Watching for file changes with StatReloader
 Watching for file changes with StatReloader
+Not Found: /favicon.ico
+Watching for file changes with StatReloader
+Not Found: /favicon.ico
+/app/apps/comentarios/views.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+Not Found: /favicon.ico
+Bad Request: /api/v1/auth/login/
+Bad Request: /api/v1/trabajos/
+Bad Request: /api/v1/trabajos/
+Bad Request: /api/v1/trabajos/
+/app/apps/trabajos/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /api/v1/trabajos/
+Watching for file changes with StatReloader
+Bad Request: /api/v1/trabajos/
+/app/apps/trabajos/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Forbidden: /api/v1/trabajos/45/aprobar/
+Method Not Allowed: /api/v1/trabajos/45/aprobar/
+Forbidden: /api/v1/trabajos/45/aprobar/
+Forbidden: /api/v1/trabajos/7/aprobar/
+Forbidden: /api/v1/trabajos/45/aprobar/
+/app/apps/trabajos/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /api/v1/trabajos/45/aprobar/
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Not Found: /favicon.ico
+Unauthorized: /api/v1/usuarios/perfil/
+Unauthorized: /api/v1/trabajos/
+Unauthorized: /api/v1/usuarios/perfil/
+/app/apps/trabajos/models.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Bad Request: /api/v1/auth/login/
+Bad Request: /api/v1/auth/login/
+Bad Request: /api/v1/auth/login/
+Bad Request: /api/v1/auth/register/
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+/app/apps/usuarios/views.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Not Found: /favicon.ico
+Unauthorized: /api/v1/usuarios/perfil/
+Unauthorized: /api/v1/trabajos/
+Unauthorized: /api/v1/usuarios/perfil/
+/app/apps/trabajos/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+/app/apps/trabajos/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+/app/apps/trabajos/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/trabajos/views.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader

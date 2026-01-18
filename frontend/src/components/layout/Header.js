@@ -81,6 +81,21 @@ function Header() {
               );
             })}
 
+            {/* NUEVO: Link para Estudiantes */}
+            {user?.rol === 'estudiante' && (
+              <Link
+                to="/dashboard/mis-trabajos"
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  location.pathname === '/dashboard/mis-trabajos'
+                    ? 'text-primary-800 bg-primary-50 border-b-2 border-primary-800'
+                    : 'text-gray-700 hover:text-primary-800 hover:bg-gray-50'
+                }`}
+              >
+                <DocumentTextIcon className="h-4 w-4" />
+                <span>Mis Trabajos</span>
+              </Link>
+            )}
+
             {/* Dashboard para usuarios autorizados */}
             {hasAnyRole(['encargado_especial_grado', 'superuser_especial_grado', 'encargado_pasantias', 'superuser_pasantias', 'administrador']) && (
               <div className="relative group">
@@ -137,6 +152,17 @@ function Header() {
                       </p>
                     </div>
                     
+                  {user?.rol === 'estudiante' && (
+                    <Link
+                      to="/dashboard/mis-trabajos"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      <DocumentTextIcon className="h-4 w-4 text-primary-600" />
+                      <span className="font-semibold text-primary-700">Mis Trabajos</span>
+                    </Link>
+                  )}
+
                     <Link
                       to="/perfil"
                       className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
@@ -211,6 +237,22 @@ function Header() {
                   </Link>
                 );
               })}
+
+              {/* NUEVO: Link Móvil para Estudiantes */}
+              {user?.rol === 'estudiante' && (
+                <Link
+                  to="/dashboard/mis-trabajos"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === '/dashboard/mis-trabajos'
+                      ? 'text-primary-800 bg-primary-50'
+                      : 'text-gray-700 hover:text-primary-800 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <DocumentTextIcon className="h-5 w-5" />
+                  <span>Mis Trabajos</span>
+                </Link>
+              )}
 
               {/* Dashboard móvil para usuarios autorizados */}
               {hasAnyRole(['encargado_especial_grado', 'superuser_especial_grado', 'encargado_pasantias', 'superuser_pasantias', 'administrador']) && (

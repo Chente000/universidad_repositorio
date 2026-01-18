@@ -12,11 +12,16 @@ class TrabajoInvestigacionCreateSerializer(serializers.ModelSerializer):
     """
     Serializer para crear trabajos de investigación
     """
+    estudiante = serializers.PrimaryKeyRelatedField(
+        queryset=Usuario.objects.filter(rol='estudiante'),
+        required=False,
+        allow_null=True
+    )
     class Meta:
         model = TrabajoInvestigacion
         fields = [
             'titulo', 'autores', 'tutores', 'carrera', 'tipo_trabajo',
-            'año', 'archivo_pdf'
+            'año', 'archivo_pdf', 'estudiante'
         ]
     
     def validate(self, attrs):
@@ -55,7 +60,7 @@ class TrabajoInvestigacionListSerializer(serializers.ModelSerializer):
     """
     Serializer para listar trabajos de investigación
     """
-    carrera_display = serializers.CharField(source='carrera.nombre', read_only=True)
+    carrera_nombre = serializers.CharField(source='carrera.nombre', read_only=True)
     tipo_trabajo_display = serializers.CharField(source='get_tipo_trabajo_display', read_only=True)
     subido_por_nombre = serializers.CharField(source='subido_por.get_full_name', read_only=True)
     puede_descargar = serializers.SerializerMethodField()
@@ -64,10 +69,10 @@ class TrabajoInvestigacionListSerializer(serializers.ModelSerializer):
     class Meta:
         model = TrabajoInvestigacion
         fields = [
-            'id', 'titulo', 'autores', 'año', 'carrera', 'carrera_display',
+            'id', 'titulo', 'autores', 'año', 'carrera', 'carrera_nombre',
             'tipo_trabajo', 'tipo_trabajo_display', 'fecha_subida',
             'subido_por_nombre', 'estado', 'total_descargas',
-            'puede_descargar', 'calificacion_promedio'
+            'puede_descargar', 'calificacion_promedio', 'archivo_pdf', 'resumen'
         ]
     
     def get_puede_descargar(self, obj):
@@ -91,7 +96,7 @@ class TrabajoInvestigacionDetailSerializer(serializers.ModelSerializer):
     """
     Serializer para detalle de trabajos de investigación
     """
-    carrera_display = serializers.CharField(source='carrera.nombre', read_only=True)
+    carrera_nombre = serializers.CharField(source='carrera.nombre', read_only=True)
     tipo_trabajo_display = serializers.CharField(source='get_tipo_trabajo_display', read_only=True)
     subido_por_nombre = serializers.CharField(source='subido_por.get_full_name', read_only=True)
     aprobado_por_nombre = serializers.CharField(source='aprobado_por.get_full_name', read_only=True)
@@ -102,7 +107,7 @@ class TrabajoInvestigacionDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = TrabajoInvestigacion
         fields = [
-            'id', 'titulo', 'autores', 'tutores', 'año', 'carrera', 'carrera_display',
+            'id', 'titulo', 'autores', 'tutores', 'año', 'carrera', 'carrera_nombre',
             'tipo_trabajo', 'tipo_trabajo_display', 'resumen', 'objetivos',
             'tags_ia', 'fecha_subida', 'fecha_aprobacion', 'estado',
             'subido_por_nombre', 'aprobado_por_nombre', 'total_descargas',
@@ -186,9 +191,12 @@ class TrabajoInvestigacionAprobacionSerializer(serializers.Serializer):
         # Verificar que el usuario tiene permisos para aprobar
         trabajo = self.instance
         if value == 'aprobado':
-            if not usuario.es_superuser_trabajo:
+            es_admin = usuario.rol == 'administrador' or usuario.is_superuser
+            es_super_grado = usuario.rol == 'superuser_especial_grado' and trabajo.tipo_trabajo == 'especial_grado'
+            es_super_pasantia = usuario.rol == 'superuser_pasantias' and trabajo.tipo_trabajo == 'practicas_profesionales'
+            if not (es_admin or es_super_grado or es_super_pasantia):
                 raise serializers.ValidationError(
-                    "Solo los superusuarios pueden aprobar trabajos."
+                    "No tienes el rango de 'Super Usuario' necesario para aprobar este tipo de trabajo."
                 )
         
         return value
@@ -202,7 +210,7 @@ class TrabajoInvestigacionAprobacionSerializer(serializers.Serializer):
         with transaction.atomic():
             if estado == 'aprobado':
                 trabajo.marcar_como_aprobado(usuario)
-            elif estado == 'rechazodo':
+            elif estado == 'rechazado':
                 trabajo.marcar_como_rechazado(motivo)
             elif estado == 'requiere_correcciones':
                 trabajo.estado = 'requiere_correcciones'
