@@ -30,7 +30,6 @@ function Header() {
 
   const navigationItems = [
     { name: 'Inicio', href: '/', icon: AcademicCapIcon },
-    { name: 'Buscar', href: '/busqueda', icon: MagnifyingGlassIcon },
     { name: 'Trabajos', href: '/trabajos', icon: DocumentTextIcon },
   ];
 

@@ -189,7 +189,7 @@ export default function ListaTrabajos() {
                       </div>
                       <div className="flex items-center">
                         <BookOpen className="w-4 h-4 mr-2 text-primary-600" />
-                        <span>{trabajo.carrera_display}</span>
+                        <span>{trabajo.carrera_nombre}</span>
                       </div>
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-2 text-primary-600" />
