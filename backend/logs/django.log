@@ -5552,3 +5552,56 @@ Watching for file changes with StatReloader
 /app/apps/trabajos/views.py changed, reloading.
 Watching for file changes with StatReloader
 Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Not Found: /favicon.ico
+Unauthorized: /api/v1/usuarios/perfil/
+Unauthorized: /api/v1/trabajos/
+Unauthorized: /api/v1/usuarios/perfil/
+/app/apps/usuarios/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Bad Request: /api/v1/trabajos/
+Bad Request: /api/v1/trabajos/
+Bad Request: /api/v1/trabajos/
+Bad Request: /api/v1/trabajos/
+Bad Request: /api/v1/trabajos/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+/app/apps/trabajos/urls.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/configuracion-carreras/
+Not Found: /api/v1/trabajos/configuracion-carreras/
+/app/apps/trabajos/urls.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+/app/apps/usuarios/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+/app/apps/usuarios/serializers.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader

@@ -1,3 +1,5 @@
+# backend/apps/usuarios/serializers.py
+
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -67,7 +69,7 @@ class UsuarioPerfilSerializer(serializers.ModelSerializer):
     """
     Serializer para el perfil de usuario
     """
-    carrera_display = serializers.CharField(source='get_carrera_display', read_only=True)
+    carrera_display = serializers.CharField(source='carrera.nombre', read_only=True)
     rol_display = serializers.CharField(source='get_rol_display', read_only=True)
     
     class Meta:
@@ -79,13 +81,18 @@ class UsuarioPerfilSerializer(serializers.ModelSerializer):
             'fecha_registro', 'ultima_conexion'
         ]
         read_only_fields = ['id', 'fecha_registro', 'ultima_conexion']
+        
+    def get_carrera_display(self, obj):
+        if obj.carrera:
+            return obj.carrera.nombre
+        return "No asignada"
 
 
 class UsuarioListSerializer(serializers.ModelSerializer):
     """
     Serializer para listado de usuarios (admin)
     """
-    carrera_display = serializers.CharField(source='get_carrera_display', read_only=True)
+    carrera_display = serializers.CharField(source='carrera.nombre', read_only=True)
     rol_display = serializers.CharField(source='get_rol_display', read_only=True)
     
     class Meta:

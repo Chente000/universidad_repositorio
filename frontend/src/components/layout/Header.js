@@ -164,7 +164,7 @@ function Header() {
                   )}
 
                     <Link
-                      to="/perfil"
+                      to="/dashboard/perfil"
                       className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
@@ -289,7 +289,7 @@ function Header() {
                       </p>
                     </div>
                     <Link
-                      to="/perfil"
+                      to="/dashboard/perfil"
                       className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-800 hover:bg-gray-50"
                       onClick={() => setIsMenuOpen(false)}
                     >

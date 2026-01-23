@@ -18,6 +18,7 @@ import Register from './pages/auth/Register';
 import { ProtectedRoute } from './pages/auth/ProtectedRoute';
 import Gestion from './pages/dashboard/Gestion';
 import MisTrabajos from './pages/dashboard/MisTrabajos';
+import Perfil from './pages/dashboard/Perfil';
 
 // Configuración de React Query
 const queryClient = new QueryClient();
@@ -64,7 +65,7 @@ function App() {
                     </ProtectedRoute>
                   } 
                 />
-
+                <Route path="/dashboard/perfil" element={<Perfil />} />
                 {/* RUTA PROTEGIDA: Gestión (Solo para administradores según tu código) */}
                 {/* IMPORTANTE: Si quieres que los encargados también entren, agrégalos al array */}
                 <Route 

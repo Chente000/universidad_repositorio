@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+// frontend/src/pages/ListaTrabajos.js
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import { Search, BookOpen, User, Calendar, Download, Star } from 'lucide-react';
+import { Search, BookOpen, User, Calendar, Download, Star, FilterX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ListaTrabajos() {
@@ -10,24 +11,65 @@ export default function ListaTrabajos() {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
+  const [carreras, setCarreras] = useState([]); // <-- Nuevo estado para carreras
+  // Estados para filtros
+  const [filtroCarrera, setFiltroCarrera] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('');
+
+  // 1. Efecto para cargar las carreras desde el backend
   useEffect(() => {
-    fetchTrabajos();
+    const fetchCarreras = async () => {
+      try {
+        const res = await axios.get('/carreras/'); // Ajusta la URL según tu router de Django
+        if (Array.isArray(res.data)) {
+        setCarreras(res.data);
+      } else if (res.data.results && Array.isArray(res.data.results)) {
+        // Por si acaso Django está paginando la respuesta
+        setCarreras(res.data.results);
+      }
+      } catch (err) {
+        console.error("Error cargando carreras:", err);
+        setCarreras([]); // Mantenemos el array vacío en caso de error
+      }
+    };
+    fetchCarreras();
   }, []);
 
-  const fetchTrabajos = async (query = '') => {
+  // 2. PETICIÓN DE TRABAJOS (Se mantiene casi igual)
+  const fetchTrabajos = useCallback(async () => {
     try {
       setLoading(true);
-      // Usamos el parámetro 'search' que ya configuraste en Django
-      const res = await axios.get(`/trabajos/${query ? `?search=${query}` : ''}`);
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      
+      // Enviamos el ID de la carrera si existe
+      if (filtroCarrera) params.append('carrera', filtroCarrera); 
+      
+      // Enviamos el slug exacto que espera el modelo ('practicas_profesionales')
+      if (filtroTipo) params.append('tipo_trabajo', filtroTipo);
+
+      const res = await axios.get(`/trabajos/?${params.toString()}`);
       const data = Array.isArray(res.data) ? res.data : (res.data.results || []);
       setTrabajos(data);
       setError(null);
     } catch (err) {
-      console.error("Error cargando trabajos:", err);
-      setError("No se pudieron cargar los trabajos. Intenta de nuevo más tarde.");
+      setError("No se pudieron cargar los trabajos.");
     } finally {
       setLoading(false);
     }
+  }, [searchTerm, filtroCarrera, filtroTipo]);
+
+  useEffect(() => {
+    const setTimeoutId = setTimeout(() => {
+    fetchTrabajos();
+  }, 300); // Añadimos un pequeño retraso para evitar demasiadas llamadas rápidas
+    return () => clearTimeout(setTimeoutId);
+  }, [fetchTrabajos]);
+
+  const limpiarFiltros = () => {
+    setSearchTerm('');
+    setFiltroCarrera('');
+    setFiltroTipo('');
   };
 
   const handleSearch = (e) => {
@@ -41,19 +83,57 @@ export default function ListaTrabajos() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-primary-900">Explorar Investigaciones</h1>
-          <p className="text-gray-600">Encuentra trabajos especiales de grado y pasantías.</p>
+          <p className="text-gray-600">Filtra por carrera o tipo de proyecto para encontrar lo que buscas.</p>
         </div>
 
-        <form onSubmit={handleSearch} className="relative w-full md:w-96">
-          <input
-            type="text"
-            placeholder="Buscar por título, autor o tutor..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
-        </form>
+        {/* BARRA DE FILTROS */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Buscador de Texto */}
+          <div className="relative col-span-1 md:col-span-2">
+            <input
+              type="text"
+              placeholder="Título, autor o tutor..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
+          </div>
+
+          {/* Filtro Carrera */}
+          <select 
+            className="p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+            value={filtroCarrera}
+            onChange={(e) => setFiltroCarrera(e.target.value)}
+          >
+            <option value="">Todas las Carreras</option>
+          {carreras.map((c) => (
+            <option key={c.id} value={c.id}> {/* Usamos el ID para el filtro de ForeignKey */}
+              {c.nombre}
+            </option>
+          ))}
+        </select>
+
+          {/* Filtro Tipo */}
+          <select 
+            className="p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
+          >
+            <option value="">Todos los Tipos</option>
+            <option value="especial_grado">Trabajo Especial de Grado</option>
+            <option value="practicas_profesionales">Pasantía / Prácticas</option>
+          </select>
+        </div>
+
+        {(searchTerm || filtroCarrera || filtroTipo) && (
+          <button 
+            onClick={limpiarFiltros}
+            className="mt-4 text-sm text-red-600 flex items-center hover:underline"
+          >
+            <FilterX className="w-4 h-4 mr-1" /> Limpiar filtros
+          </button>
+        )}
       </div>
 
       {/* Estado de Carga */}
