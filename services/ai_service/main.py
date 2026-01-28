@@ -1,4 +1,5 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
+# services/ai_service/main.py
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, BackgroundTasks, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -7,8 +8,9 @@ import uvicorn
 import os
 import tempfile
 import logging
+import re
 from pathlib import Path
-
+from tasks import process_document_task
 # Importar servicio de IA
 from ai_processor import get_ai_service, AIService
 
@@ -105,12 +107,13 @@ async def health_check():
 
 @app.post("/process_pdf", response_model=ProcessResponse)
 async def process_pdf(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    trabajo_id: str = "",
+    trabajo_id: str = Form(...),
     service: AIService = Depends(get_ai_service_dependency)
 ):
     """
-    Procesar PDF y extraer información
+    Recibe el PDF y lanza la tarea de procesamiento en segundo plano.
     """
     if not trabajo_id:
         raise HTTPException(status_code=400, detail="trabajo_id is required")
@@ -119,24 +122,47 @@ async def process_pdf(
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
     
     try:
-        # Guardar archivo temporalmente
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            content = await file.read()
-            tmp_file.write(content)
-            pdf_path = tmp_file.name
+        # 1. Creamos un directorio para archivos temporales si no existe
+        upload_dir = Path("temp_uploads")
+        upload_dir.mkdir(exist_ok=True)
         
-        try:
-            # Procesar PDF
-            result = service.process_pdf_and_extract(pdf_path, trabajo_id)
-            return ProcessResponse(**result)
-            
-        finally:
-            # Limpiar archivo temporal
-            os.unlink(pdf_path)
+        # 2. Guardamos el archivo con un nombre único (usar nombre seguro)
+        def sanitize_filename(name: str) -> str:
+            # extraer basename y limpiar caracteres no seguros
+            base = os.path.basename(name)
+            base = base.replace(' ', '_')
+            base = re.sub(r'[^A-Za-z0-9._\-]', '', base)
+            return base[:150]
+
+        safe_filename = sanitize_filename(file.filename)
+        file_path = upload_dir / f"{trabajo_id}_{safe_filename}"
+
+        # Asegurarnos de que existan los directorios padres
+        logger.info(f"Receiving file. upload_dir={upload_dir}, original_filename={file.filename}, safe_filename={safe_filename}")
+        logger.info(f"Computed file_path={file_path}")
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.info(f"file_path.parent exists: {file_path.parent.exists()}")
+
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # 3. Importamos y lanzamos la tarea de fondo
+        from tasks import process_document_task
+        
+        # Pasamos el path como string para que la tarea lo encuentre
+        background_tasks.add_task(process_document_task, trabajo_id, str(file_path))
+        
+        # 4. Respondemos de inmediato al usuario
+        return ProcessResponse(
+            success=True,
+            trabajo_id=trabajo_id,
+            error="Procesamiento iniciado en segundo plano. Los resultados se guardarán en el índice vectorial."
+        )
             
     except Exception as e:
-        logger.error(f"Error processing PDF: {e}")
-        raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
+        logger.error(f"Error al recibir PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al recibir PDF: {str(e)}")
 
 @app.post("/search", response_model=List[SearchResult])
 async def semantic_search(

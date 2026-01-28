@@ -16,6 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, permissions
 import os
 from django.http import FileResponse
+from .services import enviar_pdf_a_ia
 
 from .models import TrabajoInvestigacion, ConfiguracionCarrera, LogActividades
 from .serializers import (
@@ -26,6 +27,8 @@ from .serializers import (
 )
 
 Usuario = get_user_model()
+import logging
+logger = logging.getLogger(__name__)
 
 # Aplicamos csrf_exempt a todo el ViewSet para permitir la subida desde el frontend (puerto 3001)
 # Esto soluciona el error "CSRF Failed: Origin checking failed"
@@ -115,6 +118,16 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
         
         # Aquí se activaría el procesamiento de IA en background
         # procesar_trabajo_con_ia.delay(trabajo.id)
+        
+        # --- NUEVA LÓGICA DE IA ---
+        # Enviamos el PDF al servicio de FastAPI si existe el archivo
+        if trabajo.archivo_pdf:
+            try:
+                enviar_pdf_a_ia(trabajo.id, trabajo.archivo_pdf)
+            except Exception as e:
+                # Logeamos el error pero no detenemos la respuesta al usuario
+                print(f"Error al enviar a IA: {e}")
+        # --------------------------
         
         return Response({
             'message': 'Trabajo subido exitosamente. Será procesado por la IA.',
@@ -347,64 +360,68 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def buscar_inteligente(self, request):
-        """
-        Búsqueda inteligente con IA
-        """
+        import requests
+        
         query = request.query_params.get('q', '')
         carrera = request.query_params.get('carrera', '')
-        tipo_trabajo = request.query_params.get('tipo_trabajo', '')
-        año = request.query_params.get('año', '')
         
         if not query:
-            return Response({
-                'error': 'Debe proporcionar una consulta de búsqueda.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Aquí se integraría con el servicio de IA para búsqueda semántica
-        # Por ahora usamos búsqueda tradicional como fallback
-        
+            return Response({'error': 'Consulta vacía'}, status=400)
+
+        ids_recomendados = []
+        try:
+            # 1. Llamar al servicio de IA
+            response = requests.post(
+                "http://ai-service:8000/search", 
+                json={"query": query, "top_k": 10},
+                timeout=5
+            )
+            
+            if response.status_code == 200:
+                resultados_ia = response.json()
+                logger.info(f"IA returned {len(resultados_ia)} results for query='{query}'")
+                # Extraemos los IDs de la respuesta de la IA y convertimos a int
+                try:
+                    ids_recomendados = [int(r.get('trabajo_id')) for r in resultados_ia if r.get('trabajo_id')]
+                except Exception:
+                    ids_recomendados = [int(str(r.get('trabajo_id'))) for r in resultados_ia if r.get('trabajo_id')]
+                logger.info(f"IDs recomendados: {ids_recomendados}")
+                
+        except Exception as e:
+            print(f"Error conectando con IA: {e}")
+            # Si falla, la lista ids_recomendados queda vacía y pasamos al fallback
+
+        # 2. Buscar los objetos en la Base de Datos
         trabajos = self.get_queryset().filter(estado='aprobado')
         
+        if ids_recomendados:
+            # Filtramos solo los que trajo la IA
+            trabajos = trabajos.filter(id__in=ids_recomendados)
+            
+            # TRUCO PRO: Ordenar los resultados de Django en el mismo orden que la IA
+            # (Porque filter(id__in=...) a veces desordena los resultados)
+            from django.db.models import Case, When
+            preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids_recomendados)])
+            trabajos = trabajos.order_by(preserved)
+            
+        else:
+            # Fallback: Búsqueda tradicional si la IA no trajo nada o falló
+            trabajos = trabajos.filter(
+                Q(titulo__icontains=query) | 
+                Q(resumen__icontains=query) |
+                Q(objetivos__icontains=query)
+            )
+
         if carrera:
             trabajos = trabajos.filter(carrera=carrera)
-        if tipo_trabajo:
-            trabajos = trabajos.filter(tipo_trabajo=tipo_trabajo)
-        if año:
-            trabajos = trabajos.filter(año=año)
-        
-        # Búsqueda por texto
-        trabajos = trabajos.filter(
-            Q(titulo__icontains=query) |
-            Q(autores__icontains=query) |
-            Q(resumen__icontains=query) |
-            Q(objetivos__icontains=query)
-        )
-        
-        # Aquí se agregaría el scoring de IA
-        serializer = TrabajoInvestigacionListSerializer(
-            trabajos[:20],
-            many=True,
-            context={'request': request}
-        )
-        
-        # Registrar búsqueda
-        LogActividades.objects.create(
-            usuario=request.user,
-            accion='search',
-            descripcion=f"Búsqueda inteligente: {query}",
-            ip_address=self._get_client_ip(request),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
-        )
+
+        # Serializamos
+        serializer = TrabajoInvestigacionListSerializer(trabajos[:20], many=True, context={'request': request})
         
         return Response({
             'resultados': serializer.data,
             'total': trabajos.count(),
-            'query': query,
-            'filtros': {
-                'carrera': carrera,
-                'tipo_trabajo': tipo_trabajo,
-                'año': año
-            }
+            'modo': 'IA (Semántica)' if ids_recomendados else 'Tradicional (Texto)'
         })
 
     @action(detail=False, methods=['get'])
@@ -458,20 +475,15 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def estadisticas(self, request):
-        """
-        Estadísticas de trabajos corregidas (Usando Sum y manejo de nulos)
-        """
-        # Verificación de permisos robusta
         user = request.user
-        es_admin = getattr(user, 'is_staff', False) or getattr(user, 'es_superuser_trabajo', False)
-        
-        if not es_admin:
+        # Permitimos a cualquier rol que no sea estudiante ver estadísticas
+        rol = getattr(user, 'rol', '')
+        if rol == 'estudiante' and not user.is_staff:
             raise PermissionDenied("No tienes permisos para ver estadísticas.")
         
+        # self.get_queryset() ya aplica los filtros de rol que definiste arriba
         queryset = self.get_queryset()
         
-        # 1. Calculamos la suma de descargas (Sum en lugar de Count)
-        # .aggregate devuelve un dict, usamos .get() o 'or 0' para evitar None
         total_descargas_data = queryset.aggregate(total=Sum('total_descargas'))
         total_descargas = total_descargas_data.get('total') or 0
 
@@ -480,29 +492,75 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
             'trabajos_aprobados': queryset.filter(estado='aprobado').count(),
             'trabajos_pendientes': queryset.filter(estado='pendiente').count(),
             'trabajos_rechazados': queryset.filter(estado='rechazado').count(),
-            'trabajos_requieren_correcciones': queryset.filter(estado='requiere_correcciones').count(),
             'total_descargas': total_descargas,
-            
-            # Agrupaciones: dict(values_list) es la forma más eficiente de formatear esto
-            'trabajos_por_carrera': dict(
-                queryset.values('carrera').annotate(count=Count('id')).values_list('carrera', 'count')
-            ),
-            'trabajos_por_tipo': dict(
-                queryset.values('tipo_trabajo').annotate(count=Count('id')).values_list('tipo_trabajo', 'count')
-            ),
-            'trabajos_por_año': dict(
-                queryset.values('año').annotate(count=Count('id')).values_list('año', 'count')
-            ),
-            
-            # Ranking de trabajos
-            'top_trabajos_mas_descargados': list(
-                queryset.filter(estado='aprobado')
-                .order_by('-total_descargas')[:10]
-                .values('id', 'titulo', 'total_descargas')
-            )
+            'recientes': TrabajoInvestigacionListSerializer(
+                queryset.order_by('-fecha_subida')[:5], 
+                many=True, 
+                context={'request': request}
+            ).data
         }
-        
         return Response(stats)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.AllowAny])
+    def aplicar_ia(self, request, pk=None):
+        """
+        Endpoint que recibe los resultados estructurados de la IA y los guarda
+        en el objeto TrabajoInvestigacion correspondiente.
+        Espera JSON: {"structured_info": {...}, "embedding": [...], "tags": [...]}
+        """
+        trabajo = self.get_object()
+
+        structured = request.data.get('structured_info') or request.data.get('structured')
+        embedding = request.data.get('embedding') or request.data.get('embedding_vector')
+        tags = request.data.get('tags') or request.data.get('tags_ia')
+
+        updated = False
+        try:
+            if structured and isinstance(structured, dict):
+                resumen = structured.get('resumen')
+                objetivos = structured.get('objetivos')
+                titulo = structured.get('titulo')
+                autores = structured.get('autores')
+
+                if resumen:
+                    trabajo.resumen = resumen
+                    updated = True
+                if objetivos:
+                    trabajo.objetivos = objetivos
+                    updated = True
+                if titulo and not trabajo.titulo:
+                    trabajo.titulo = titulo
+                    updated = True
+                if autores and not trabajo.autores:
+                    trabajo.autores = autores
+                    updated = True
+
+            if tags is not None:
+                # Aceptar lista o string separado por comas
+                if isinstance(tags, str):
+                    try:
+                        tags_list = [t.strip() for t in tags.split(',') if t.strip()]
+                    except Exception:
+                        tags_list = []
+                elif isinstance(tags, list):
+                    tags_list = tags
+                else:
+                    tags_list = []
+
+                trabajo.tags_ia = tags_list
+                updated = True
+
+            if embedding is not None:
+                trabajo.embedding_vector = embedding
+                updated = True
+
+            if updated:
+                trabajo.save()
+
+            return Response({'success': True, 'updated': updated, 'trabajo_id': trabajo.id}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.exception(f"Error aplicando resultados IA a trabajo {pk}: {e}")
+            return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ConfiguracionCarreraViewSet(viewsets.ModelViewSet):
@@ -537,3 +595,70 @@ class ConfiguracionCarreraViewSet(viewsets.ModelViewSet):
         if not request.user.is_staff:
             raise PermissionDenied("Solo los administradores pueden eliminar configuraciones de carrera.")
         return super().destroy(request, *args, **kwargs)
+
+
+# Endpoint alternativo (no router) para recibir callbacks de la IA
+from rest_framework.decorators import api_view, permission_classes
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def aplicar_ia_callback(request, pk):
+    """Callback público para que el servicio IA envíe resultados.
+    Recibe JSON similar a la acción `aplicar_ia` del ViewSet.
+    """
+    try:
+        trabajo = TrabajoInvestigacion.objects.get(pk=pk)
+    except TrabajoInvestigacion.DoesNotExist:
+        return Response({'success': False, 'error': 'Trabajo no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+    structured = request.data.get('structured_info') or request.data.get('structured')
+    embedding = request.data.get('embedding') or request.data.get('embedding_vector')
+    tags = request.data.get('tags') or request.data.get('tags_ia')
+
+    updated = False
+    try:
+        if structured and isinstance(structured, dict):
+            resumen = structured.get('resumen')
+            objetivos = structured.get('objetivos')
+            titulo = structured.get('titulo')
+            autores = structured.get('autores')
+
+            if resumen:
+                trabajo.resumen = resumen
+                updated = True
+            if objetivos:
+                trabajo.objetivos = objetivos
+                updated = True
+            if titulo and not trabajo.titulo:
+                trabajo.titulo = titulo
+                updated = True
+            if autores and not trabajo.autores:
+                trabajo.autores = autores
+                updated = True
+
+        if tags is not None:
+            if isinstance(tags, str):
+                try:
+                    tags_list = [t.strip() for t in tags.split(',') if t.strip()]
+                except Exception:
+                    tags_list = []
+            elif isinstance(tags, list):
+                tags_list = tags
+            else:
+                tags_list = []
+
+            trabajo.tags_ia = tags_list
+            updated = True
+
+        if embedding is not None:
+            trabajo.embedding_vector = embedding
+            updated = True
+
+        if updated:
+            trabajo.save()
+
+        return Response({'success': True, 'updated': updated, 'trabajo_id': trabajo.id}, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.exception(f"Error aplicando callback IA para trabajo {pk}: {e}")
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

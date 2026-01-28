@@ -11,6 +11,7 @@ from .health_views import health_check
 # Importar viewsets
 from apps.usuarios.views import UsuarioRegistroView, UsuarioLoginView, UsuarioViewSet
 from apps.trabajos.views import TrabajoInvestigacionViewSet, ConfiguracionCarreraViewSet
+from apps.trabajos.views import aplicar_ia_callback
 from apps.comentarios.views import ComentarioViewSet, RetroalimentacionIAViewSet
 
 # Crear router
@@ -28,6 +29,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # API v1
+    # Callback directo desde el servicio de IA (fallback si router no expone la acción)
+    path('api/v1/trabajos/<int:pk>/aplicar_ia/', aplicar_ia_callback, name='aplicar_ia_callback'),
     path('api/v1/', (include(router.urls))), # <-- CAMBIO CRÍTICO AQUÍ    
     # Autenticación
     path('api/v1/auth/register/', UsuarioRegistroView.as_view({'post': 'create'}), name='registro'),
@@ -39,6 +42,8 @@ urlpatterns = [
 
     # Health check
     path('api/v1/health/', health_check, name='health'),
+    # Callback directo desde el servicio de IA (fallback si router no expone la acción)
+    path('api/v1/trabajos/<int:pk>/aplicar_ia/', aplicar_ia_callback, name='aplicar_ia_callback'),
 ]
 
 # Servir archivos estáticos en desarrollo

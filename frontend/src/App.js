@@ -19,6 +19,8 @@ import { ProtectedRoute } from './pages/auth/ProtectedRoute';
 import Gestion from './pages/dashboard/Gestion';
 import MisTrabajos from './pages/dashboard/MisTrabajos';
 import Perfil from './pages/dashboard/Perfil';
+import DashboardEncargado from './pages/dashboard/DashboardEncargado';
+import Landing from './pages/Landing';
 
 // Configuración de React Query
 const queryClient = new QueryClient();
@@ -35,7 +37,7 @@ function App() {
             {/* El contenido principal cambia según la ruta */}
             <main className="flex-1 p-4 container mx-auto mt-4">
               <Routes>
-                <Route path="/" element={<ListaTrabajos />} />
+                <Route path="/" element={<Landing />} />
                 <Route path="/trabajos" element={<ListaTrabajos />} />
                 <Route path="/trabajos/:id" element={<DetalleTrabajo />} />
                 <Route path="/login" element={<Login />} />
@@ -82,6 +84,8 @@ function App() {
                     </ProtectedRoute>
                   } 
                 />
+                  <Route path="/dashboard" element={<DashboardEncargado />} />
+
               </Routes>
             </main>
             {/* Contenedor para las notificaciones flotantes */}
