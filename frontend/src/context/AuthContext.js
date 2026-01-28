@@ -168,34 +168,32 @@ export function AuthProvider({ children }) {
   // Verify token function
 // AuthContext.js - VERSIÓN CORREGIDA
 const verifyToken = async () => {
-    const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('token');
 
-    // 1. EL FILTRO VA PRIMERO: Si no hay token, ni siquiera lo intentes
-    if (!token) {
-        dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE }); // Esto pone isLoading en false y auth en false
-        return; 
-    }
+  if (!token) {
+    dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE });
+    return;
+  }
 
-    try {
-        dispatch({ type: AUTH_ACTIONS.LOGIN_START });
-        
-        // 2. Solo hacemos la petición si pasamos el filtro de arriba
-        const response = await axios.get('/usuarios/perfil/');
-        
-        dispatch({ 
-            type: AUTH_ACTIONS.SET_USER, 
-            payload: response.data 
-        });
-    } catch (error) {
-        console.error('Token verification failed:', error);
-        
-        // 3. Si el token no sirve (401), limpiamos y paramos el bucle
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE });
-    } finally {
-        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
-    }
+  try {
+    dispatch({ type: AUTH_ACTIONS.LOGIN_START });
+
+    // Ensure axios has header
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+    const response = await axios.get('/usuarios/perfil/');
+    dispatch({
+      type: AUTH_ACTIONS.SET_USER,
+      payload: response.data
+    });
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE });
+  } finally {
+    dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+  }
 };
 
   // Login function

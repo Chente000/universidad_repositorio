@@ -88,7 +88,11 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
             )
         
         # Superusuarios y administradores ven todo
-        return TrabajoInvestigacion.objects.all()
+        qs = TrabajoInvestigacion.objects.all()
+        # Para la acción pública 'list' mostramos por defecto solo aprobados
+        if getattr(self, 'action', None) == 'list':
+            return qs.filter(estado='aprobado')
+        return qs
     
     
     def create(self, request, *args, **kwargs):
@@ -217,10 +221,15 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
             user_agent=request.META.get('HTTP_USER_AGENT', '')
         )
         
-        # 3. Incrementar contador (Opcional, según el código que te pasaron)
-        if hasattr(trabajo, 'descargas_count'):
-            trabajo.descargas_count += 1
-            trabajo.save()
+        # 3. Incrementar contador de descargas
+        try:
+            trabajo.incrementar_descargas()
+        except Exception:
+            try:
+                trabajo.total_descargas = (trabajo.total_descargas or 0) + 1
+                trabajo.save(update_fields=['total_descargas'])
+            except Exception:
+                logger.exception(f"No se pudo incrementar contador de descargas para trabajo {trabajo.id}")
             
         # 4. Retornar el archivo físico (Nueva lógica)
         response = FileResponse(trabajo.archivo_pdf.open('rb'), content_type='application/pdf')
@@ -286,6 +295,24 @@ class TrabajoInvestigacionViewSet(viewsets.ModelViewSet):
             })
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, pk=None):
+        """Eliminar trabajo — solo para superusuarios/administradores."""
+        trabajo = self.get_object()
+        user = request.user
+        if not (user.is_superuser or getattr(user, 'rol', '') == 'administrador' or getattr(user, 'is_staff', False)):
+            return Response({'detail': 'No tienes permisos para eliminar trabajos.'}, status=status.HTTP_403_FORBIDDEN)
+
+        trabajo_id = trabajo.id
+        trabajo.delete()
+        LogActividades.objects.create(
+            usuario=user,
+            accion='delete',
+            trabajo=None,
+            descripcion=f"Eliminó el trabajo: {trabajo_id}",
+            ip_address=self._get_client_ip(request)
+        )
+        return Response({'success': True, 'deleted': trabajo_id})
 
 
     @action(detail=True, methods=['post'])

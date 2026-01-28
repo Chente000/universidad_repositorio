@@ -2,13 +2,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FileText, Download, Calendar, User, GraduationCap, ArrowLeft, Star, Tag } from 'lucide-react';
+import { FileText, Download, Calendar, User, GraduationCap, ArrowLeft, Star, Tag, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 
 export default function DetalleTrabajo() {
 const { id } = useParams();
 const navigate = useNavigate();
 const [trabajo, setTrabajo] = useState(null);
 const [loading, setLoading] = useState(true);
+const { user } = useAuth();
 const handleDescargar = async () => {
     try {
     const response = await axios.get(`/trabajos/${id}/descargar/`, {
@@ -33,6 +36,22 @@ const handleDescargar = async () => {
     console.error("Error al descargar el archivo:", err);
     alert("No se pudo descargar el archivo. Asegúrate de tener permisos.");
     }
+};
+
+const handleEliminar = async () => {
+        if (!confirm('¿Estás seguro de que quieres eliminar este trabajo? Esta acción no se puede deshacer.')) return;
+        try {
+            const res = await axios.delete(`/trabajos/${id}/`);
+            if (res.status === 200 || res.status === 204) {
+                toast.success('Trabajo eliminado');
+                navigate('/trabajos');
+            } else {
+                toast.error('No se pudo eliminar el trabajo');
+            }
+        } catch (err) {
+            console.error('Error eliminando trabajo:', err);
+            toast.error('Error eliminando el trabajo');
+        }
 };
 
 
@@ -130,6 +149,16 @@ return (
             >
             <Download className="w-5 h-5 mr-2" /> Descargar PDF
             </button>
+
+                        {/* Botón Eliminar sólo para superusuarios */}
+                        {(user && (user.is_superuser || user.is_staff)) && (
+                            <button
+                                onClick={handleEliminar}
+                                className="w-full mt-3 flex items-center justify-center py-3 rounded-xl font-bold transition-all shadow-lg bg-red-600 text-white hover:bg-red-700"
+                            >
+                                <Trash2 className="w-5 h-5 mr-2" /> Eliminar trabajo
+                            </button>
+                        )}
             
             {!trabajo.puede_descargar && (
             <p className="text-xs text-red-500 mt-2 text-center">Debes iniciar sesión para descargar este archivo.</p>
